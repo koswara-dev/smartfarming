@@ -1,4 +1,4 @@
-package service
+package tests
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"smartfarming/config"
 	"smartfarming/dto"
 	"smartfarming/model"
+	"smartfarming/service"
 
 	"github.com/google/uuid"
 )
@@ -81,7 +82,7 @@ func (m *mockUserRepository) List(ctx context.Context, page int, limit int, sear
 
 func TestAuthService_Register(t *testing.T) {
 	repo := newMockUserRepository()
-	s := NewAuthService(repo)
+	s := service.NewAuthService(repo)
 
 	req := dto.RegisterRequest{
 		Name:     "Test User",
@@ -105,7 +106,7 @@ func TestAuthService_Register(t *testing.T) {
 
 func TestAuthService_Logout(t *testing.T) {
 	repo := newMockUserRepository()
-	s := NewAuthService(repo)
+	s := service.NewAuthService(repo)
 
 	req := dto.RegisterRequest{
 		Name:     "Logout User",

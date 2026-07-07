@@ -1,0 +1,24 @@
+2026/07/08 06:05:18 Database connection successfully established.
+2026/07/08 06:05:18 Database migrations applied successfully.
+2026/07/08 06:05:18 MongoDB connection successfully established.
+2026/07/08 06:05:18 Redis connection successfully established.
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /swagger/*any             --> github.com/swaggo/gin-swagger.CustomWrapHandler.func1 (4 handlers)
+[GIN-debug] POST   /api/v1/auth/register     --> smartfarming/handler.(*AuthHandler).Register-fm (4 handlers)
+[GIN-debug] POST   /api/v1/auth/login        --> smartfarming/handler.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /api/v1/auth/me           --> smartfarming/handler.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] POST   /api/v1/auth/logout       --> smartfarming/handler.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] POST   /api/v1/users             --> smartfarming/handler.(*UserHandler).Create-fm (5 handlers)
+[GIN-debug] GET    /api/v1/users             --> smartfarming/handler.(*UserHandler).List-fm (5 handlers)
+[GIN-debug] GET    /api/v1/users/:id         --> smartfarming/handler.(*UserHandler).GetByID-fm (6 handlers)
+[GIN-debug] PUT    /api/v1/users/:id         --> smartfarming/handler.(*UserHandler).Update-fm (6 handlers)
+[GIN-debug] DELETE /api/v1/users/:id         --> smartfarming/handler.(*UserHandler).Delete-fm (6 handlers)
+2026/07/08 06:05:18 Server starting on port 8081 in development mode...
+[GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
+Please check https://github.com/gin-gonic/gin/blob/master/docs/doc.md#dont-trust-all-proxies for details.
+[GIN-debug] Listening and serving HTTP on :8081

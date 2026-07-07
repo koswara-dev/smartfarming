@@ -1,15 +1,16 @@
-package service
+package tests
 
 import (
 	"context"
 	"testing"
 
 	"smartfarming/dto"
+	"smartfarming/service"
 )
 
 func TestUserService_CRUD(t *testing.T) {
 	repo := newMockUserRepository()
-	s := NewUserService(repo)
+	s := service.NewUserService(repo)
 
 	// Test Create
 	createReq := dto.CreateUserRequest{

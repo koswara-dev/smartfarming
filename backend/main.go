@@ -23,6 +23,9 @@ func main() {
 	// 1. Load Configurations
 	config.LoadConfig()
 
+	// Initialize File Logger
+	config.InitLogger()
+
 	// 2. Connect to Databases
 	config.ConnectPostgres()
 	config.ConnectMongoDB()
