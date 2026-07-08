@@ -2,7 +2,13 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
+	"math/big"
+	"sync"
 	"time"
 
 	"smartfarming/config"
@@ -16,21 +22,42 @@ import (
 )
 
 type AuthService interface {
-	Register(ctx context.Context, req dto.RegisterRequest) (*dto.AuthResponse, error)
+	Register(ctx context.Context, req dto.RegisterRequest) (*dto.RegisterResponse, error)
 	Login(ctx context.Context, req dto.LoginRequest) (*dto.AuthResponse, error)
 	GetMe(ctx context.Context, userID uuid.UUID) (*dto.UserResponse, error)
 	Logout(ctx context.Context, tokenStr string) error
+	VerifyOTP(ctx context.Context, req dto.VerifyOTPRequest) (*dto.AuthResponse, error)
 }
 
 type authService struct {
 	userRepo repository.UserRepository
 }
 
+type tempRegisterData struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	OTP      string `json:"otp"`
+}
+
+var (
+	tempRegisterStore = make(map[string]tempRegisterData)
+	tempStoreMutex   sync.RWMutex
+)
+
+func generateOTP() (string, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(900000))
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%06d", n.Int64()+100000), nil
+}
+
 func NewAuthService(userRepo repository.UserRepository) AuthService {
 	return &authService{userRepo: userRepo}
 }
 
-func (s *authService) Register(ctx context.Context, req dto.RegisterRequest) (*dto.AuthResponse, error) {
+func (s *authService) Register(ctx context.Context, req dto.RegisterRequest) (*dto.RegisterResponse, error) {
 	existingUser, _ := s.userRepo.GetByEmail(ctx, req.Email)
 	if existingUser != nil {
 		return nil, errors.New("email is already registered")
@@ -41,16 +68,92 @@ func (s *authService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		return nil, err
 	}
 
-	user := &model.User{
+	otp, err := generateOTP()
+	if err != nil {
+		return nil, err
+	}
+
+	tempData := tempRegisterData{
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: string(hashedPassword),
+		OTP:      otp,
+	}
+
+	log.Printf("Generated OTP for %s: %s", req.Email, otp)
+
+	if config.RedisClient != nil {
+		jsonData, err := json.Marshal(tempData)
+		if err != nil {
+			return nil, err
+		}
+		redisKey := "otp:register:" + req.Email
+		err = config.RedisClient.Set(ctx, redisKey, jsonData, 5*time.Minute).Err()
+		if err != nil {
+			return nil, errors.New("failed to save registration OTP session")
+		}
+	} else {
+		tempStoreMutex.Lock()
+		tempRegisterStore[req.Email] = tempData
+		tempStoreMutex.Unlock()
+	}
+
+	return &dto.RegisterResponse{
+		Message: "Registration initiated. Verification OTP code has been generated.",
+		OTP:     otp,
+	}, nil
+}
+
+func (s *authService) VerifyOTP(ctx context.Context, req dto.VerifyOTPRequest) (*dto.AuthResponse, error) {
+	var tempData tempRegisterData
+	found := false
+
+	if config.RedisClient != nil {
+		redisKey := "otp:register:" + req.Email
+		val, err := config.RedisClient.Get(ctx, redisKey).Result()
+		if err == nil {
+			err = json.Unmarshal([]byte(val), &tempData)
+			if err == nil {
+				found = true
+			}
+		}
+	} else {
+		tempStoreMutex.RLock()
+		data, exists := tempRegisterStore[req.Email]
+		if exists {
+			tempData = data
+			found = true
+		}
+		tempStoreMutex.RUnlock()
+	}
+
+	if !found {
+		return nil, errors.New("registration session not found or expired")
+	}
+
+	if tempData.OTP != req.Code {
+		return nil, errors.New("invalid verification OTP code")
+	}
+
+	user := &model.User{
+		Name:     tempData.Name,
+		Email:    tempData.Email,
+		Password: tempData.Password,
 		Role:     "user",
 	}
 
-	err = s.userRepo.Create(ctx, user)
+	err := s.userRepo.Create(ctx, user)
 	if err != nil {
 		return nil, err
+	}
+
+	if config.RedisClient != nil {
+		redisKey := "otp:register:" + req.Email
+		config.RedisClient.Del(ctx, redisKey)
+	} else {
+		tempStoreMutex.Lock()
+		delete(tempRegisterStore, req.Email)
+		tempStoreMutex.Unlock()
 	}
 
 	token, err := s.generateJWT(user.ID, user.Role)

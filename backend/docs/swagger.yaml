@@ -82,6 +82,13 @@ definitions:
     - name
     - password
     type: object
+  dto.RegisterResponse:
+    properties:
+      message:
+        type: string
+      otp:
+        type: string
+    type: object
   dto.UpdateUserRequest:
     properties:
       email:
@@ -114,6 +121,16 @@ definitions:
         type: string
       updatedAt:
         type: string
+    type: object
+  dto.VerifyOTPRequest:
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+    required:
+    - code
+    - email
     type: object
 host: localhost:8081
 info:
@@ -213,7 +230,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Register a new user with name, email, password, and role
+      description: Initiates registration and generates a 6-digit verification code
+        (printed in console)
       parameters:
       - description: Register request
         in: body
@@ -231,13 +249,45 @@ paths:
             - $ref: '#/definitions/dto.APIResponse'
             - properties:
                 data:
+                  $ref: '#/definitions/dto.RegisterResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Register a new user (OTP initiation)
+      tags:
+      - Auth
+  /auth/verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: Completes registration and activates the user account using the
+        6-digit code
+      parameters:
+      - description: Verify OTP request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.VerifyOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
                   $ref: '#/definitions/dto.AuthResponse'
               type: object
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.APIResponse'
-      summary: Register a new user
+      summary: Verify Registration OTP
       tags:
       - Auth
   /users:

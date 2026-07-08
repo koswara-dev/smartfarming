@@ -26,3 +26,13 @@ type UserResponse struct {
 	CreatedAt string    `json:"createdAt"`
 	UpdatedAt string    `json:"updatedAt"`
 }
+
+type VerifyOTPRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	Code  string `json:"code" binding:"required,len=6"`
+}
+
+type RegisterResponse struct {
+	Message string `json:"message"`
+	OTP     string `json:"otp,omitempty"`
+}

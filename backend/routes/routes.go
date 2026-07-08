@@ -30,6 +30,7 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 		{
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/verify-otp", authHandler.VerifyOTP)
 		}
 
 		// Protected Auth Endpoints

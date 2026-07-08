@@ -95,11 +95,35 @@ func TestAuthService_Register(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if res.User.Email != "test@example.com" {
-		t.Errorf("Expected email to be test@example.com, got %s", res.User.Email)
+	if res.OTP == "" {
+		t.Fatal("Expected generated OTP code, got empty")
 	}
 
-	if res.Token == "" {
+	// Verify incorrect OTP
+	verifyWrongReq := dto.VerifyOTPRequest{
+		Email: "test@example.com",
+		Code:  "999999",
+	}
+	_, err = s.VerifyOTP(context.Background(), verifyWrongReq)
+	if err == nil {
+		t.Error("Expected error verifying with incorrect OTP code, got nil")
+	}
+
+	// Verify correct OTP
+	verifyReq := dto.VerifyOTPRequest{
+		Email: "test@example.com",
+		Code:  res.OTP,
+	}
+	authRes, err := s.VerifyOTP(context.Background(), verifyReq)
+	if err != nil {
+		t.Fatalf("Expected no verification error, got %v", err)
+	}
+
+	if authRes.User.Email != "test@example.com" {
+		t.Errorf("Expected email to be test@example.com, got %s", authRes.User.Email)
+	}
+
+	if authRes.Token == "" {
 		t.Error("Expected non-empty JWT token")
 	}
 }
@@ -119,7 +143,16 @@ func TestAuthService_Logout(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	err = s.Logout(context.Background(), res.Token)
+	verifyReq := dto.VerifyOTPRequest{
+		Email: "logout@example.com",
+		Code:  res.OTP,
+	}
+	authRes, err := s.VerifyOTP(context.Background(), verifyReq)
+	if err != nil {
+		t.Fatalf("Expected no verification error, got %v", err)
+	}
+
+	err = s.Logout(context.Background(), authRes.Token)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

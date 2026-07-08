@@ -20,13 +20,13 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 }
 
 // Register godoc
-// @Summary Register a new user
-// @Description Register a new user with name, email, password, and role
+// @Summary Register a new user (OTP initiation)
+// @Description Initiates registration and generates a 6-digit verification code (printed in console)
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Param request body dto.RegisterRequest true "Register request"
-// @Success 201 {object} dto.APIResponse{data=dto.AuthResponse}
+// @Success 201 {object} dto.APIResponse{data=dto.RegisterResponse}
 // @Failure 400 {object} dto.APIResponse
 // @Router /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -51,7 +51,44 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, dto.APIResponse{
 		Success: true,
-		Message: "User registered successfully",
+		Message: "Registration initiated successfully. Please verify your OTP code.",
+		Data:    res,
+	})
+}
+
+// VerifyOTP godoc
+// @Summary Verify Registration OTP
+// @Description Completes registration and activates the user account using the 6-digit code
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body dto.VerifyOTPRequest true "Verify OTP request"
+// @Success 200 {object} dto.APIResponse{data=dto.AuthResponse}
+// @Failure 400 {object} dto.APIResponse
+// @Router /auth/verify-otp [post]
+func (h *AuthHandler) VerifyOTP(c *gin.Context) {
+	var req dto.VerifyOTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Validation error",
+			Errors:  err.Error(),
+		})
+		return
+	}
+
+	res, err := h.authService.VerifyOTP(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Message: "User account verified and registered successfully",
 		Data:    res,
 	})
 }
