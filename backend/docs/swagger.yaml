@@ -9,12 +9,75 @@ definitions:
       success:
         type: boolean
     type: object
+  dto.ArticleResponse:
+    properties:
+      category:
+        $ref: '#/definitions/dto.CategoryResponse'
+      content:
+        type: string
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      id:
+        type: string
+      imageUrl:
+        type: string
+      slug:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
   dto.AuthResponse:
     properties:
       token:
         type: string
       user:
         $ref: '#/definitions/dto.UserResponse'
+    type: object
+  dto.CategoryResponse:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  dto.CreateArticleRequest:
+    properties:
+      categoryId:
+        type: string
+      content:
+        minLength: 10
+        type: string
+      title:
+        maxLength: 255
+        minLength: 3
+        type: string
+    required:
+    - categoryId
+    - content
+    - title
+    type: object
+  dto.CreateCategoryRequest:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+    required:
+    - name
     type: object
   dto.CreateUserRequest:
     properties:
@@ -89,6 +152,27 @@ definitions:
       otp:
         type: string
     type: object
+  dto.UpdateArticleRequest:
+    properties:
+      categoryId:
+        type: string
+      content:
+        minLength: 10
+        type: string
+      title:
+        maxLength: 255
+        minLength: 3
+        type: string
+    type: object
+  dto.UpdateCategoryRequest:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+    type: object
   dto.UpdateUserRequest:
     properties:
       email:
@@ -117,6 +201,8 @@ definitions:
         type: string
       name:
         type: string
+      photoUrl:
+        type: string
       role:
         type: string
       updatedAt:
@@ -140,6 +226,252 @@ info:
   title: SmartFarming API
   version: "1.0"
 paths:
+  /articles:
+    get:
+      consumes:
+      - application/json
+      description: Lists articles with pagination, search by title/content, and filter
+        by categoryId
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Limit per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search by title or content
+        in: query
+        name: search
+        type: string
+      - description: Filter by Category UUID
+        in: query
+        name: categoryId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PaginationResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: List Articles with search, pagination and filtering
+      tags:
+      - Articles
+    post:
+      consumes:
+      - application/json
+      description: Creates a new article (Admin/Operator only)
+      parameters:
+      - description: Create Article request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateArticleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ArticleResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create an Article
+      tags:
+      - Articles
+  /articles/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes an article by its UUID (Admin/Operator only)
+      parameters:
+      - description: Article UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete Article
+      tags:
+      - Articles
+    get:
+      consumes:
+      - application/json
+      description: Fetches details of an article by its UUID or Slug
+      parameters:
+      - description: Article UUID or Slug
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ArticleResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get Article by ID or Slug
+      tags:
+      - Articles
+    put:
+      consumes:
+      - application/json
+      description: Updates article details by its UUID (Admin/Operator only)
+      parameters:
+      - description: Article UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Article request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateArticleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ArticleResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Article
+      tags:
+      - Articles
+  /articles/{id}/image:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads an image asset for a specific article (Admin/Operator only)
+      parameters:
+      - description: Article UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image file
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ArticleResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload Article Image
+      tags:
+      - Articles
   /auth/login:
     post:
       consumes:
@@ -290,6 +622,198 @@ paths:
       summary: Verify Registration OTP
       tags:
       - Auth
+  /categories:
+    get:
+      consumes:
+      - application/json
+      description: Lists categories with pagination and search parameters
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Limit per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search by name or description
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PaginationResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: List Categories with search and pagination
+      tags:
+      - Categories
+    post:
+      consumes:
+      - application/json
+      description: Creates a new article category (Admin/Operator only)
+      parameters:
+      - description: Create Category request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.CategoryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a Category
+      tags:
+      - Categories
+  /categories/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a category by its UUID (Admin/Operator only)
+      parameters:
+      - description: Category UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete Category
+      tags:
+      - Categories
+    get:
+      consumes:
+      - application/json
+      description: Fetches details of a category by its UUID
+      parameters:
+      - description: Category UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.CategoryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get Category by ID
+      tags:
+      - Categories
+    put:
+      consumes:
+      - application/json
+      description: Updates category details by its UUID (Admin/Operator only)
+      parameters:
+      - description: Category UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Category request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.CategoryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Category
+      tags:
+      - Categories
   /users:
     get:
       consumes:
@@ -496,6 +1020,42 @@ paths:
       security:
       - BearerAuth: []
       summary: Update User
+      tags:
+      - Users
+  /users/photo:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a profile image for the authenticated user
+      parameters:
+      - description: Photo file
+        in: formData
+        name: photo
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload Profile Photo
       tags:
       - Users
 securityDefinitions:

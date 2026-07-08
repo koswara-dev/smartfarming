@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"html"
 	"math"
 
 	"smartfarming/dto"
@@ -19,6 +20,7 @@ type UserService interface {
 	Update(ctx context.Context, id uuid.UUID, req dto.UpdateUserRequest) (*dto.UserResponse, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, req dto.PaginationRequest) (*dto.PaginationResponse, error)
+	UpdatePhoto(ctx context.Context, id uuid.UUID, photoURL string) (*dto.UserResponse, error)
 }
 
 type userService struct {
@@ -41,7 +43,7 @@ func (s *userService) Create(ctx context.Context, req dto.CreateUserRequest) (*d
 	}
 
 	user := &model.User{
-		Name:     req.Name,
+		Name:     html.EscapeString(req.Name),
 		Email:    req.Email,
 		Password: string(hashedPassword),
 		Role:     req.Role,
@@ -73,7 +75,7 @@ func (s *userService) Update(ctx context.Context, id uuid.UUID, req dto.UpdateUs
 	}
 
 	if req.Name != nil {
-		user.Name = *req.Name
+		user.Name = html.EscapeString(*req.Name)
 	}
 	if req.Email != nil {
 		if *req.Email != user.Email {
@@ -140,4 +142,20 @@ func (s *userService) List(ctx context.Context, req dto.PaginationRequest) (*dto
 			TotalPages:   totalPages,
 		},
 	}, nil
+}
+
+func (s *userService) UpdatePhoto(ctx context.Context, id uuid.UUID, photoURL string) (*dto.UserResponse, error) {
+	user, err := s.userRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	user.PhotoURL = photoURL
+	err = s.userRepo.Update(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	res := mapToUserResponse(user)
+	return &res, nil
 }

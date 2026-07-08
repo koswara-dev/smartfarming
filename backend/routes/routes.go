@@ -12,7 +12,12 @@ import (
 	_ "smartfarming/docs" // Loaded side-effect imports for auto-generated Swagger docs
 )
 
-func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler) *gin.Engine {
+func SetupRouter(
+	authHandler *handler.AuthHandler,
+	userHandler *handler.UserHandler,
+	categoryHandler *handler.CategoryHandler,
+	articleHandler *handler.ArticleHandler,
+) *gin.Engine {
 	r := gin.Default()
 
 	// Allow all CORS in development mode
@@ -48,6 +53,7 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 			// Creating/Listing all users is restricted to Admins in handler logic
 			users.POST("", userHandler.Create)
 			users.GET("", userHandler.List)
+			users.POST("/photo", userHandler.UploadPhoto)
 
 			// IDOR Protected routes: users can view/edit/delete their own record (or Admin)
 			usersID := users.Group("/:id")
@@ -56,6 +62,41 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 				usersID.GET("", userHandler.GetByID)
 				usersID.PUT("", userHandler.Update)
 				usersID.DELETE("", userHandler.Delete)
+			}
+		}
+
+		// Categories Endpoints
+		categories := api.Group("/categories")
+		{
+			// Read actions (Public)
+			categories.GET("", categoryHandler.List)
+			categories.GET("/:id", categoryHandler.GetByID)
+
+			// Write actions (Admin / Operator only)
+			categoriesWrite := categories.Group("")
+			categoriesWrite.Use(middleware.AuthMiddleware(), middleware.RoleMiddleware("admin", "operator"))
+			{
+				categoriesWrite.POST("", categoryHandler.Create)
+				categoriesWrite.PUT("/:id", categoryHandler.Update)
+				categoriesWrite.DELETE("/:id", categoryHandler.Delete)
+			}
+		}
+
+		// Articles Endpoints
+		articles := api.Group("/articles")
+		{
+			// Read actions (Public)
+			articles.GET("", articleHandler.List)
+			articles.GET("/:id", articleHandler.GetByID)
+
+			// Write actions (Admin / Operator only)
+			articlesWrite := articles.Group("")
+			articlesWrite.Use(middleware.AuthMiddleware(), middleware.RoleMiddleware("admin", "operator"))
+			{
+				articlesWrite.POST("", articleHandler.Create)
+				articlesWrite.PUT("/:id", articleHandler.Update)
+				articlesWrite.DELETE("/:id", articleHandler.Delete)
+				articlesWrite.POST("/:id/image", articleHandler.UploadImage)
 			}
 		}
 	}

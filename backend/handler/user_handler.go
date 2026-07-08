@@ -11,11 +11,15 @@ import (
 )
 
 type UserHandler struct {
-	userService service.UserService
+	userService    service.UserService
+	storageService service.StorageService
 }
 
-func NewUserHandler(userService service.UserService) *UserHandler {
-	return &UserHandler{userService: userService}
+func NewUserHandler(userService service.UserService, storageService service.StorageService) *UserHandler {
+	return &UserHandler{
+		userService:    userService,
+		storageService: storageService,
+	}
 }
 
 // Create godoc
@@ -244,6 +248,72 @@ func (h *UserHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.APIResponse{
 		Success: true,
 		Message: "Users fetched successfully",
+		Data:    res,
+	})
+}
+
+// UploadPhoto godoc
+// @Summary Upload Profile Photo
+// @Description Uploads a profile image for the authenticated user
+// @Tags Users
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param photo formData file true "Photo file"
+// @Success 200 {object} dto.APIResponse{data=dto.UserResponse}
+// @Failure 400 {object} dto.APIResponse
+// @Failure 401 {object} dto.APIResponse
+// @Router /users/photo [post]
+func (h *UserHandler) UploadPhoto(c *gin.Context) {
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.APIResponse{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	userID, ok := userIDVal.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, dto.APIResponse{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("photo")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Failed to parse file upload: 'photo' field is missing or invalid",
+		})
+		return
+	}
+	defer file.Close()
+
+	url, err := h.storageService.UploadFile(c.Request.Context(), file, header.Size, header.Header.Get("Content-Type"), "photos")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	res, err := h.userService.UpdatePhoto(c.Request.Context(), userID, url)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Message: "Profile photo uploaded successfully",
 		Data:    res,
 	})
 }

@@ -33,7 +33,7 @@ func ConnectPostgres() {
 	log.Println("Database connection successfully established.")
 
 	// Run Auto-migrations
-	err = DB.AutoMigrate(&model.User{})
+	err = DB.AutoMigrate(&model.User{}, &model.Category{}, &model.Article{})
 	if err != nil {
 		log.Fatalf("Failed to run database migrations: %v", err)
 	}
